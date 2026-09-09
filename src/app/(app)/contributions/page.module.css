@@ -1,0 +1,18 @@
+.filterInline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+
+.filterInline select {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 6px 10px;
+  color: var(--foreground);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+}

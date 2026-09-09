@@ -1,0 +1,55 @@
+.header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: var(--primary);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.subtitle {
+  margin-top: 8px;
+  font-size: 14px;
+  color: var(--muted-foreground);
+  max-width: 70ch;
+}
+
+.errorBox {
+  background: rgba(184, 75, 58, 0.08);
+  color: var(--destructive);
+  border: 1px solid rgba(184, 75, 58, 0.3);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.cellPrimary {
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.cellSecondary {
+  font-size: 12px;
+  color: var(--muted-foreground);
+  margin-top: 2px;
+}
+
+.cellMuted {
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+
+.rowActions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}

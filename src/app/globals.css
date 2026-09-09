@@ -1,0 +1,83 @@
+:root {
+  --background: #f8f5ef;
+  --foreground: #20252b;
+  --card: #fffdf9;
+  --card-foreground: #20252b;
+  --primary: #d9653b;
+  --primary-foreground: #ffffff;
+  --secondary: #ece6dc;
+  --secondary-foreground: #4a514e;
+  --muted: #eee9e0;
+  --muted-foreground: #7a807c;
+  --accent: #dce9df;
+  --accent-foreground: #315843;
+  --destructive: #b84b3a;
+  --destructive-foreground: #ffffff;
+  --border: #e4ddd1;
+  --input: #d8d0c4;
+  --radius: 12px;
+  --shadow-sm: 0 1px 2px rgba(32, 37, 43, 0.04);
+  --shadow-md: 0 4px 18px rgba(32, 37, 43, 0.06);
+  --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  margin: 0;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+h1 {
+  font-size: 28px;
+  line-height: 1.2;
+}
+
+h2 {
+  font-size: 20px;
+  line-height: 1.3;
+}
+
+h3 {
+  font-size: 16px;
+}
+
+p {
+  margin: 0;
+}

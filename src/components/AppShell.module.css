@@ -1,0 +1,336 @@
+.shell {
+  display: grid;
+  grid-template-columns: 248px 1fr;
+  min-height: 100vh;
+  background: var(--background);
+}
+
+.menuButton {
+  display: none;
+  position: fixed;
+  top: 14px;
+  left: 14px;
+  z-index: 60;
+  width: 42px;
+  height: 42px;
+  align-items: center;
+  justify-content: center;
+  background: var(--card);
+  color: var(--foreground);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-sm);
+  font-size: 20px;
+  line-height: 1;
+  padding: 0;
+}
+
+.menuButton:hover {
+  background: var(--secondary);
+}
+
+.menuIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+}
+
+.backdrop {
+  display: none;
+}
+
+.sidebar {
+  background: var(--card);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  padding: 22px 16px;
+  gap: 24px;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px;
+}
+
+.brandMark {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 18px;
+}
+
+.brandName {
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.brandTag {
+  font-size: 11px;
+  color: var(--muted-foreground);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.navItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  color: var(--secondary-foreground);
+  font-weight: 500;
+  font-size: 14px;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.navItem:hover {
+  background: var(--secondary);
+  color: var(--foreground);
+}
+
+.navItemActive {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.navItemActive:hover {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.navIcon {
+  width: 18px;
+  text-align: center;
+  font-size: 14px;
+  opacity: 0.85;
+}
+
+.sidebarFoot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--muted-foreground);
+  padding: 10px 8px;
+  border-top: 1px solid var(--border);
+}
+
+.statusDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--accent-foreground);
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--background);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 28px;
+  gap: 16px;
+}
+
+.search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 12px;
+  width: min(420px, 60vw);
+  color: var(--muted-foreground);
+}
+
+.search input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--foreground);
+}
+
+.search input::placeholder {
+  color: var(--muted-foreground);
+}
+
+.topActions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.iconButton {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  color: var(--foreground);
+  font-size: 16px;
+}
+
+.user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-foreground);
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.userMeta {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+}
+
+.userName {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.userRole {
+  font-size: 11px;
+  color: var(--muted-foreground);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.signOut {
+  background: var(--card);
+  border: 1px solid var(--border);
+  color: var(--foreground);
+  border-radius: 10px;
+  padding: 0 14px;
+  height: 38px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.signOut:hover {
+  background: var(--secondary);
+}
+
+.content {
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+@media (max-width: 900px) {
+  .menuButton {
+    display: inline-flex;
+  }
+
+  .shell {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: min(280px, 86vw);
+    height: 100vh;
+    height: 100dvh;
+    z-index: 55;
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+    box-shadow: var(--shadow-md);
+    border-right: 1px solid var(--border);
+  }
+
+  .sidebarOpen {
+    transform: translateX(0);
+  }
+
+  .backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(32, 37, 43, 0.45);
+    z-index: 50;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+  }
+
+  .backdropOpen {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .topbar {
+    padding: 14px 16px 14px 70px;
+    gap: 10px;
+  }
+
+  .search {
+    display: none;
+  }
+
+  .userMeta {
+    display: none;
+  }
+
+  .signOut {
+    padding: 0 12px;
+    height: 36px;
+    font-size: 12px;
+  }
+
+  .content {
+    padding: 20px 16px 28px;
+  }
+}
+
+@media (max-width: 480px) {
+  .signOut {
+    display: none;
+  }
+}

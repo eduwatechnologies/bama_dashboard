@@ -1,0 +1,99 @@
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.inputWrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0 14px;
+  min-height: 52px;
+  transition: border 0.15s ease, box-shadow 0.15s ease;
+}
+
+.inputWrap:focus-within {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(217, 101, 59, 0.15);
+}
+
+.inputWrapError {
+  border-color: var(--destructive);
+}
+
+.inputWrapError:focus-within {
+  box-shadow: 0 0 0 3px rgba(184, 75, 58, 0.18);
+}
+
+.leadingIcon {
+  color: var(--muted-foreground);
+  font-size: 15px;
+}
+
+.input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  outline: none;
+  height: 52px;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--foreground);
+}
+
+.control {
+  flex: 1;
+  border: none;
+  background: transparent;
+  outline: none;
+  color: var(--foreground);
+  width: 100%;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.4;
+  padding: 0;
+}
+
+.control option {
+  color: var(--foreground);
+  background: var(--card);
+}
+
+.textareaWrap {
+  padding: 10px 12px;
+  align-items: flex-start;
+}
+
+textarea.control {
+  height: auto;
+  min-height: 80px;
+  resize: vertical;
+}
+
+.input::placeholder {
+  color: var(--muted-foreground);
+}
+
+.control::placeholder {
+  color: var(--muted-foreground);
+}
+
+.hint {
+  font-size: 11px;
+  color: var(--muted-foreground);
+}
+
+.error {
+  font-size: 11px;
+  color: var(--destructive);
+}
