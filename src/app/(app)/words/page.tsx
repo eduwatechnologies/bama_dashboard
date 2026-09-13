@@ -119,6 +119,7 @@ export default function WordsPage() {
         </div>
       ),
       width: '180px',
+      sticky: true,
     },
   ];
 

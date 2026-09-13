@@ -9,6 +9,7 @@ export interface Column<T> {
   header: string;
   render: (row: T) => ReactNode;
   width?: string;
+  sticky?: boolean;
 }
 
 interface ResourceTableProps<T> {
@@ -77,7 +78,11 @@ export function ResourceTable<T>({
           <thead>
             <tr>
               {columns.map((c) => (
-                <th key={c.key} style={c.width ? { width: c.width } : undefined}>
+                <th
+                  key={c.key}
+                  className={c.sticky ? styles.stickyCell : undefined}
+                  style={c.width ? { width: c.width } : undefined}
+                >
                   {c.header}
                 </th>
               ))}
@@ -100,7 +105,9 @@ export function ResourceTable<T>({
               rows.map((row) => (
                 <tr key={getKey(row)}>
                   {columns.map((c) => (
-                    <td key={c.key}>{c.render(row)}</td>
+                    <td key={c.key} className={c.sticky ? styles.stickyCell : undefined}>
+                      {c.render(row)}
+                    </td>
                   ))}
                 </tr>
               ))

@@ -125,6 +125,7 @@ export default function ContributionsPage() {
         </div>
       ),
       width: '120px',
+      sticky: true,
     },
   ];
 

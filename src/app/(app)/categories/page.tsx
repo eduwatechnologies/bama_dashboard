@@ -88,6 +88,7 @@ export default function CategoriesPage() {
         </div>
       ),
       width: '120px',
+      sticky: true,
     },
   ];
 

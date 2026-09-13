@@ -68,12 +68,15 @@
 .tableWrap {
   border: 1px solid var(--border);
   border-radius: 12px;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
   background: var(--card);
+  scrollbar-width: thin;
 }
 
 .table {
   width: 100%;
+  min-width: 720px;
   border-collapse: collapse;
   font-size: 13px;
 }
@@ -84,6 +87,19 @@
   padding: 10px 14px;
   border-bottom: 1px solid var(--border);
   vertical-align: top;
+}
+
+.stickyCell {
+  position: sticky;
+  right: 0;
+  z-index: 1;
+  background: var(--card);
+  box-shadow: -1px 0 0 var(--border);
+}
+
+.table th.stickyCell {
+  z-index: 2;
+  background: var(--background);
 }
 
 .table th {

@@ -121,6 +121,7 @@ export default function PhrasesPage() {
         </div>
       ),
       width: '180px',
+      sticky: true,
     },
   ];
 
