@@ -17,6 +17,7 @@ const nav: NavItem[] = [
   { href: '/words', label: 'Words', icon: 'A' },
   { href: '/phrases', label: 'Phrases', icon: '✎' },
   { href: '/categories', label: 'Categories', icon: '☰' },
+  { href: '/ads', label: 'Ads', icon: '◫' },
   { href: '/contributions', label: 'Review queue', icon: '✓' },
   { href: '/installations', label: 'Installations', icon: '◯' },
   { href: '/settings', label: 'Settings', icon: '⚙' },

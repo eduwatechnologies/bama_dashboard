@@ -11,8 +11,13 @@ import type {
   ContributionStatus,
   ContributionType,
   DashboardSummary,
+  Ad,
+  AdStatus,
+  AdType,
+  GoogleAdPayload,
   Installation,
   Paginated,
+  PersonalAdPayload,
   Phrase,
   Word,
 } from './types';
@@ -201,6 +206,78 @@ export function useDeletePhrase() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['phrases'] });
       qc.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
+    },
+  });
+}
+
+export interface AdsParams {
+  page?: number;
+  limit?: number;
+  type?: AdType;
+  status?: AdStatus;
+  placement?: string;
+  q?: string;
+}
+
+export function useAds(params: AdsParams) {
+  return useQuery({
+    queryKey: ['ads', params],
+    queryFn: async () => {
+      const { data } = await api.get<{ success: true; data: Paginated<Ad> }>(
+        withParams('/ads', params),
+      );
+      return data.data;
+    },
+  });
+}
+
+export type AdInput = {
+  name: string;
+  type: AdType;
+  placement: string;
+  status: AdStatus;
+  priority: number;
+  startsAt?: string | Date | null;
+  endsAt?: string | Date | null;
+  google?: GoogleAdPayload;
+  personal?: PersonalAdPayload;
+};
+
+export function useCreateAd() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: AdInput) => {
+      const { data } = await api.post<{ success: true; data: Ad }>('/ads', input);
+      return data.data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['ads'] });
+    },
+  });
+}
+
+export function useUpdateAd() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, input }: { id: string; input: Partial<AdInput> }) => {
+      const { data } = await api.patch<{ success: true; data: Ad }>(`/ads/${id}`, input);
+      return data.data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['ads'] });
+    },
+  });
+}
+
+export function useArchiveAd() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { data } = await api.delete<{ success: true; data: Ad }>(`/ads/${id}`);
+      return data.data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['ads'] });
     },
   });
 }

@@ -89,6 +89,47 @@ export interface Installation {
   updatedAt: string;
 }
 
+export type AdType = 'GOOGLE' | 'PERSONAL';
+export type AdStatus = 'DRAFT' | 'ACTIVE' | 'PAUSED' | 'ARCHIVED';
+export type GoogleAdFormat = 'BANNER' | 'INTERSTITIAL' | 'REWARDED' | 'NATIVE';
+
+export interface GoogleAdPayload {
+  adUnitId: string;
+  format: GoogleAdFormat;
+  testMode: boolean;
+}
+
+export interface PersonalAdPayload {
+  title: string;
+  body: string;
+  imageUrl?: string;
+  targetUrl?: string;
+  ctaText?: string;
+}
+
+export interface AdAdminRef {
+  _id: string;
+  name: string;
+  email: string;
+}
+
+export interface Ad {
+  _id: string;
+  name: string;
+  type: AdType;
+  placement: string;
+  status: AdStatus;
+  priority: number;
+  startsAt: string | null;
+  endsAt: string | null;
+  google?: GoogleAdPayload;
+  personal?: PersonalAdPayload;
+  createdBy?: AdAdminRef | string;
+  updatedBy?: AdAdminRef | string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface DashboardSummary {
   totalWords: number;
   totalPhrases: number;

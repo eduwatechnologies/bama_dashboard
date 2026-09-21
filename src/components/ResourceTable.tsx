@@ -4,6 +4,13 @@ import type { ReactNode } from 'react';
 import { Button } from './Button';
 import styles from './ResourceTable.module.css';
 
+export interface ResourceTableFilter {
+  value: string;
+  onChange: (next: string) => void;
+  options: { value: string; label: string }[];
+  label: string;
+}
+
 export interface Column<T> {
   key: string;
   header: string;
@@ -22,7 +29,8 @@ interface ResourceTableProps<T> {
   total: number;
   onPageChange: (page: number) => void;
   search?: { value: string; onChange: (next: string) => void; placeholder?: string };
-  filter?: { value: string; onChange: (next: string) => void; options: { value: string; label: string }[]; label: string };
+  filter?: ResourceTableFilter;
+  filters?: ResourceTableFilter[];
   toolbarAction?: ReactNode;
   loading?: boolean;
 }
@@ -38,10 +46,12 @@ export function ResourceTable<T>({
   onPageChange,
   search,
   filter,
+  filters,
   toolbarAction,
   loading,
 }: ResourceTableProps<T>) {
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const tableFilters = filter ? [filter, ...(filters ?? [])] : (filters ?? []);
   return (
     <div className={styles.wrap}>
       <div className={styles.toolbar}>
@@ -57,18 +67,18 @@ export function ResourceTable<T>({
               />
             </div>
           )}
-          {filter && (
-            <label className={styles.filter}>
-              <span>{filter.label}</span>
-              <select value={filter.value} onChange={(e) => filter.onChange(e.target.value)}>
-                {filter.options.map((opt) => (
+          {tableFilters.map((item) => (
+            <label key={item.label} className={styles.filter}>
+              <span>{item.label}</span>
+              <select value={item.value} onChange={(e) => item.onChange(e.target.value)}>
+                {item.options.map((opt) => (
                   <option key={opt.value} value={opt.value}>
                     {opt.label}
                   </option>
                 ))}
               </select>
             </label>
-          )}
+          ))}
         </div>
         <div className={styles.toolbarRight}>{toolbarAction}</div>
       </div>

@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useAuth } from '@/lib/auth';
-import { useDeleteWord, useWords } from '@/lib/hooks';
+import { useCategories, useDeleteWord, useWords } from '@/lib/hooks';
 import { Card } from '@/components/Card';
 import { Button } from '@/components/Button';
 import { Modal } from '@/components/Modal';
@@ -36,6 +36,7 @@ export default function WordsPage() {
   const [page, setPage] = useState(1);
   const [pageSize] = useState(20);
   const [status, setStatus] = useState<'' | ContentStatus>('');
+  const [category, setCategory] = useState('');
   const [search, setSearch] = useState('');
   const [editing, setEditing] = useState<Word | null>(null);
   const [creating, setCreating] = useState(false);
@@ -44,7 +45,9 @@ export default function WordsPage() {
     page,
     limit: pageSize,
     status: status || undefined,
+    category: category || undefined,
   });
+  const { data: categories = [] } = useCategories();
 
   const deleteWord = useDeleteWord();
 
@@ -152,15 +155,29 @@ export default function WordsPage() {
           total={data?.total ?? 0}
           onPageChange={setPage}
           search={{ value: search, onChange: setSearch, placeholder: 'Search English or Hausa…' }}
-          filter={{
-            label: 'Status',
-            value: status,
-            onChange: (next) => {
-              setStatus(next as '' | ContentStatus);
-              setPage(1);
+          filters={[
+            {
+              label: 'Status',
+              value: status,
+              onChange: (next) => {
+                setStatus(next as '' | ContentStatus);
+                setPage(1);
+              },
+              options: STATUS_FILTERS.map((opt) => ({ value: opt.value, label: opt.label })),
             },
-            options: STATUS_FILTERS.map((opt) => ({ value: opt.value, label: opt.label })),
-          }}
+            {
+              label: 'Category',
+              value: category,
+              onChange: (next) => {
+                setCategory(next);
+                setPage(1);
+              },
+              options: [
+                { value: '', label: 'All categories' },
+                ...categories.map((item) => ({ value: item._id, label: item.name })),
+              ],
+            },
+          ]}
           toolbarAction={
             canEdit && (
               <Button onClick={() => setCreating(true)}>New word</Button>
