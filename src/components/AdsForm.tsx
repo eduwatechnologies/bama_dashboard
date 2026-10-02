@@ -5,6 +5,7 @@ import * as Yup from 'yup';
 import { useCreateAd, useUpdateAd, type AdInput } from '@/lib/hooks';
 import { Field } from './Field';
 import { Button } from './Button';
+import { ImageGalleryField } from './ImageGalleryField';
 import { extractFieldErrors, extractErrorMessage } from '@/lib/api';
 import type { Ad, AdStatus, AdType, GoogleAdFormat } from '@/lib/types';
 import styles from './AdsForm.module.css';
@@ -12,6 +13,29 @@ import styles from './AdsForm.module.css';
 const AD_TYPES: AdType[] = ['GOOGLE', 'PERSONAL'];
 const AD_STATUSES: AdStatus[] = ['DRAFT', 'ACTIVE', 'PAUSED', 'ARCHIVED'];
 const GOOGLE_FORMATS: GoogleAdFormat[] = ['BANNER', 'INTERSTITIAL', 'REWARDED', 'NATIVE'];
+
+// Mirrors AD_PLACEMENTS in the mobile app (app/constants/ads.ts).
+const PLACEMENTS = [
+  'HOME_TOP',
+  'HOME_BOTTOM',
+  'PHRASE_DETAIL_BOTTOM',
+  'TRANSLATE_BOTTOM',
+  'PHRASES_BOTTOM',
+  'CATEGORIES_BOTTOM',
+] as const;
+
+const PLACEMENT_LABELS: Record<string, string> = {
+  HOME_TOP: 'Home · top',
+  HOME_BOTTOM: 'Home · bottom',
+  PHRASE_DETAIL_BOTTOM: 'Phrase detail · bottom',
+  TRANSLATE_BOTTOM: 'Translate · bottom',
+  PHRASES_BOTTOM: 'Phrases · bottom',
+  CATEGORIES_BOTTOM: 'Categories · bottom',
+};
+
+function placementLabel(placement: string): string {
+  return PLACEMENT_LABELS[placement] ? `${PLACEMENT_LABELS[placement]} (${placement})` : placement;
+}
 
 interface FormValues {
   name: string;
@@ -27,6 +51,7 @@ interface FormValues {
   personalTitle: string;
   personalBody: string;
   personalImageUrl: string;
+  personalImageUrls: string[];
   personalTargetUrl: string;
   personalCtaText: string;
 }
@@ -45,6 +70,7 @@ const initialValues: FormValues = {
   personalTitle: '',
   personalBody: '',
   personalImageUrl: '',
+  personalImageUrls: [],
   personalTargetUrl: '',
   personalCtaText: '',
 };
@@ -81,6 +107,10 @@ const schema = Yup.object({
   personalTitle: Yup.string().trim().max(100, 'Keep the title under 100 characters.').optional(),
   personalBody: Yup.string().trim().max(500, 'Keep the body under 500 characters.').optional(),
   personalImageUrl: optionalUrl,
+  personalImageUrls: Yup.array()
+    .of(optionalUrl)
+    .max(10, 'A personal ad can carry up to 10 images.')
+    .optional(),
   personalTargetUrl: optionalUrl,
   personalCtaText: Yup.string().trim().max(30, 'Keep the CTA under 30 characters.').optional(),
 })
@@ -123,7 +153,19 @@ function toApiDate(value: string | undefined): string | undefined {
   return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
 }
 
+function collectImageUrls(values: FormValues): string[] {
+  const pasted = values.personalImageUrl.trim();
+  const uploaded = (values.personalImageUrls ?? []).map((url) => url.trim()).filter(Boolean);
+  const merged = pasted ? [pasted, ...uploaded] : uploaded;
+  return Array.from(new Set(merged));
+}
+
 function fromAd(ad: Ad): FormValues {
+  const urls = ad.personal?.imageUrls?.length
+    ? ad.personal.imageUrls
+    : ad.personal?.imageUrl
+      ? [ad.personal.imageUrl]
+      : [];
   return {
     name: ad.name,
     type: ad.type,
@@ -137,7 +179,8 @@ function fromAd(ad: Ad): FormValues {
     googleTestMode: ad.google?.testMode ?? false,
     personalTitle: ad.personal?.title ?? '',
     personalBody: ad.personal?.body ?? '',
-    personalImageUrl: ad.personal?.imageUrl ?? '',
+    personalImageUrl: '',
+    personalImageUrls: urls,
     personalTargetUrl: ad.personal?.targetUrl ?? '',
     personalCtaText: ad.personal?.ctaText ?? '',
   };
@@ -165,12 +208,15 @@ function toInput(values: FormValues): AdInput {
     };
   }
 
+  const imageUrls = collectImageUrls(values);
+
   return {
     ...common,
     personal: {
       title: values.personalTitle.trim(),
       body: values.personalBody.trim(),
-      imageUrl: values.personalImageUrl.trim() || undefined,
+      imageUrl: imageUrls[0],
+      ...(imageUrls.length ? { imageUrls } : {}),
       targetUrl: values.personalTargetUrl.trim() || undefined,
       ctaText: values.personalCtaText.trim() || undefined,
     },
@@ -183,6 +229,7 @@ const FIELD_PATHS: Record<string, string> = {
   'personal.title': 'personalTitle',
   'personal.body': 'personalBody',
   'personal.imageUrl': 'personalImageUrl',
+  'personal.imageUrls': 'personalImageUrls',
   'personal.targetUrl': 'personalTargetUrl',
   'personal.ctaText': 'personalCtaText',
 };
@@ -197,6 +244,14 @@ export function AdsForm({ initial, onDone }: AdsFormProps) {
   const update = useUpdateAd();
   const isEdit = Boolean(initial);
   const baseValues = initial ? fromAd(initial) : initialValues;
+
+  // Ads created before the fixed list may carry another placement; keep it
+  // selectable so editing doesn't silently rewrite it.
+  const legacyPlacement =
+    initial && !PLACEMENTS.includes(initial.placement as (typeof PLACEMENTS)[number])
+      ? initial.placement
+      : null;
+  const placements = legacyPlacement ? [legacyPlacement, ...PLACEMENTS] : [...PLACEMENTS];
 
   return (
     <Formik
@@ -240,7 +295,17 @@ export function AdsForm({ initial, onDone }: AdsFormProps) {
           </div>
 
           <div className={styles.grid}>
-            <Field name="placement" label="Placement" placeholder="e.g. HOME_TOP" hint="Used by the mobile app to choose where the ad appears." />
+            <label className={styles.field}>
+              <span className={styles.label}>Placement</span>
+              <Field as="select" name="placement" label="" hint="Used by the mobile app to choose where the ad appears.">
+                <option value="">Select a placement…</option>
+                {placements.map((placement) => (
+                  <option key={placement} value={placement}>
+                    {placementLabel(placement)}
+                  </option>
+                ))}
+              </Field>
+            </label>
             <label className={styles.field}>
               <span className={styles.label}>Status</span>
               <Field as="select" name="status" label="">
@@ -291,8 +356,15 @@ export function AdsForm({ initial, onDone }: AdsFormProps) {
                 <Field name="personalCtaText" label="CTA text" placeholder="Learn more" />
               </div>
               <Field as="textarea" name="personalBody" label="Body" placeholder="Write the message shown in the app." />
+              <ImageGalleryField
+                label="Carousel images"
+                hint="First image is the default creative. Up to 10 images, JPEG/PNG/WebP/GIF/AVIF under 3 MB each."
+                value={values.personalImageUrls}
+                disabled={isSubmitting}
+                onChange={(next) => setFieldValue('personalImageUrls', next)}
+              />
               <div className={styles.grid}>
-                <Field name="personalImageUrl" label="Image URL" type="url" placeholder="https://…" />
+                <Field name="personalImageUrl" label="Extra image URL" type="url" placeholder="https://…" hint="Optional — added to the front of the carousel." />
                 <Field name="personalTargetUrl" label="Target URL" type="url" placeholder="https://…" />
               </div>
             </section>

@@ -4,10 +4,12 @@ import { useMemo, useState } from 'react';
 import { useAuth } from '@/lib/auth';
 import {
   useApproveContribution,
+  useCategories,
   useContribution,
   useContributions,
   useMarkUnderReview,
   useRejectContribution,
+  useResolveContribution,
   useReferencedContent,
 } from '@/lib/hooks';
 import { Card } from '@/components/Card';
@@ -25,6 +27,8 @@ import type {
   Contribution,
   ContributionStatus,
   ContributionType,
+  IssueCategory,
+  ReportKind,
 } from '@/lib/types';
 import styles from './page.module.css';
 import detailStyles from './contributionDetail.module.css';
@@ -35,6 +39,7 @@ const STATUS_FILTERS: { value: '' | ContributionStatus; label: string }[] = [
   { value: 'UNDER_REVIEW', label: 'Under review' },
   { value: 'APPROVED', label: 'Approved' },
   { value: 'REJECTED', label: 'Rejected' },
+  { value: 'RESOLVED', label: 'Resolved' },
 ];
 
 const TYPE_FILTERS: { value: '' | ContributionType; label: string }[] = [
@@ -46,11 +51,50 @@ const TYPE_FILTERS: { value: '' | ContributionType; label: string }[] = [
   { value: 'AUDIO', label: 'Audio' },
 ];
 
+const REPORT_KIND_LABELS: Record<ReportKind, string> = {
+  PRONUNCIATION: 'Pronunciation',
+  TRANSLATION: 'Translation',
+  ENGLISH: 'English',
+  PROBLEM: 'Problem',
+};
+
+const ISSUE_LABELS: Record<IssueCategory, string> = {
+  DUPLICATE: 'Duplicate',
+  WRONG_CATEGORY: 'Wrong category',
+  OFFENSIVE: 'Offensive',
+  INACCURATE: 'Inaccurate',
+  BROKEN_AUDIO: 'Broken audio',
+  OTHER: 'Other',
+};
+
+const REPORT_KIND_FILTERS: { value: '' | ReportKind; label: string }[] = [
+  { value: '', label: 'All reports' },
+  ...(Object.keys(REPORT_KIND_LABELS) as ReportKind[]).map((key) => ({
+    value: key,
+    label: REPORT_KIND_LABELS[key],
+  })),
+];
+
+const ISSUE_FILTERS: { value: '' | IssueCategory; label: string }[] = [
+  { value: '', label: 'All issues' },
+  ...(Object.keys(ISSUE_LABELS) as IssueCategory[]).map((key) => ({
+    value: key,
+    label: ISSUE_LABELS[key],
+  })),
+];
+
+const ACTIONABLE_FILTERS: { value: '' | 'true' | 'false'; label: string }[] = [
+  { value: '', label: 'Publishable and reports' },
+  { value: 'true', label: 'Publishable only' },
+  { value: 'false', label: 'Needs a decision' },
+];
+
 const STATUS_TONE: Record<ContributionStatus, 'positive' | 'warning' | 'critical' | 'neutral' | 'accent'> = {
   PENDING: 'warning',
   UNDER_REVIEW: 'accent',
   APPROVED: 'positive',
   REJECTED: 'critical',
+  RESOLVED: 'neutral',
 };
 
 export default function ContributionsPage() {
@@ -61,6 +105,9 @@ export default function ContributionsPage() {
   const [pageSize] = useState(20);
   const [status, setStatus] = useState<'' | ContributionStatus>('');
   const [type, setType] = useState<'' | ContributionType>('');
+  const [reportKind, setReportKind] = useState<'' | ReportKind>('');
+  const [issueCategory, setIssueCategory] = useState<'' | IssueCategory>('');
+  const [actionable, setActionable] = useState<'' | 'true' | 'false'>('');
   const [search, setSearch] = useState('');
   const [activeId, setActiveId] = useState<string | null>(null);
 
@@ -69,6 +116,9 @@ export default function ContributionsPage() {
     limit: pageSize,
     status: status || undefined,
     type: type || undefined,
+    reportKind: reportKind || undefined,
+    issueCategory: issueCategory || undefined,
+    ...(actionable ? { actionable: actionable === 'true' } : {}),
   });
 
   const rows = useMemo(() => {
@@ -76,7 +126,7 @@ export default function ContributionsPage() {
     const q = search.trim().toLowerCase();
     if (!q) return data.items;
     return data.items.filter((c) => {
-      const blob = `${c.english ?? ''} ${c.hausa ?? ''} ${c.suggestedEnglish ?? ''} ${c.suggestedHausa ?? ''}`.toLowerCase();
+      const blob = `${c.english ?? ''} ${c.hausa ?? ''} ${c.suggestedEnglish ?? ''} ${c.suggestedHausa ?? ''} ${c.reason ?? ''} ${c.contentSnapshot?.english ?? ''}`.toLowerCase();
       return blob.includes(q);
     });
   }, [data, search]);
@@ -89,10 +139,31 @@ export default function ContributionsPage() {
       width: '110px',
     },
     {
+      key: 'report',
+      header: 'Report',
+      render: (row) =>
+        row.reportKind ? (
+          <div className={styles.cellStack}>
+            <Pill tone="neutral">{REPORT_KIND_LABELS[row.reportKind]}</Pill>
+            {row.issueCategory && (
+              <span className={styles.cellMuted}>{ISSUE_LABELS[row.issueCategory]}</span>
+            )}
+          </div>
+        ) : (
+          <span className={styles.cellMuted}>—</span>
+        ),
+      width: '170px',
+    },
+    {
       key: 'preview',
       header: 'Submission',
       render: (row) => {
-        const primary = row.english ?? row.suggestedEnglish ?? row.contentId ?? row._id;
+        const primary =
+          row.english ??
+          row.suggestedEnglish ??
+          row.contentSnapshot?.english ??
+          row.contentId ??
+          row._id;
         const secondary = row.hausa ?? row.suggestedHausa ?? row.reason ?? '—';
         return (
           <div>
@@ -174,6 +245,21 @@ export default function ContributionsPage() {
                 setType(next as '' | ContributionType);
                 setPage(1);
               }}
+              reportKind={reportKind}
+              onReportKindChange={(next) => {
+                setReportKind(next as '' | ReportKind);
+                setPage(1);
+              }}
+              issueCategory={issueCategory}
+              onIssueCategoryChange={(next) => {
+                setIssueCategory(next as '' | IssueCategory);
+                setPage(1);
+              }}
+              actionable={actionable}
+              onActionableChange={(next) => {
+                setActionable(next as '' | 'true' | 'false');
+                setPage(1);
+              }}
             />
           }
           empty="No submissions in this view."
@@ -185,18 +271,68 @@ export default function ContributionsPage() {
   );
 }
 
-function FilterToolbar({ type, onTypeChange }: { type: string; onTypeChange: (next: string) => void }) {
+function FilterToolbar({
+  type,
+  onTypeChange,
+  reportKind,
+  onReportKindChange,
+  issueCategory,
+  onIssueCategoryChange,
+  actionable,
+  onActionableChange,
+}: {
+  type: string;
+  onTypeChange: (next: string) => void;
+  reportKind: string;
+  onReportKindChange: (next: string) => void;
+  issueCategory: string;
+  onIssueCategoryChange: (next: string) => void;
+  actionable: string;
+  onActionableChange: (next: string) => void;
+}) {
   return (
-    <label className={styles.filterInline}>
-      <span>Type</span>
-      <select value={type} onChange={(e) => onTypeChange(e.target.value)}>
-        {TYPE_FILTERS.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
-    </label>
+    <div className={styles.filterGroup}>
+      <label className={styles.filterInline}>
+        <span>Type</span>
+        <select value={type} onChange={(e) => onTypeChange(e.target.value)}>
+          {TYPE_FILTERS.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className={styles.filterInline}>
+        <span>Report</span>
+        <select value={reportKind} onChange={(e) => onReportKindChange(e.target.value)}>
+          {REPORT_KIND_FILTERS.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className={styles.filterInline}>
+        <span>Issue</span>
+        <select value={issueCategory} onChange={(e) => onIssueCategoryChange(e.target.value)}>
+          {ISSUE_FILTERS.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className={styles.filterInline}>
+        <span>Queue</span>
+        <select value={actionable} onChange={(e) => onActionableChange(e.target.value)}>
+          {ACTIONABLE_FILTERS.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+      </label>
+    </div>
   );
 }
 
@@ -210,11 +346,20 @@ const rejectSchema = Yup.object({
   reviewNotes: Yup.string().min(4, 'Add a short reason.').required('Reason is required to reject.'),
 });
 
+const resolveSchema = Yup.object({
+  reviewNotes: Yup.string()
+    .min(4, 'Add a short note.')
+    .required('Say what you changed so the queue stays useful.'),
+  categoryId: Yup.string().notRequired(),
+});
+
 function ContributionDetail({ id, onClose, canReview }: ContributionDetailProps) {
   const { data, isLoading, isError, error } = useContribution(id);
   const markUnderReview = useMarkUnderReview();
   const approve = useApproveContribution();
   const reject = useRejectContribution();
+  const resolve = useResolveContribution();
+  const { data: categories } = useCategories();
 
   const referencedType =
     data && (data.type === 'TRANSLATION' || data.type === 'CORRECTION' || data.type === 'AUDIO')
@@ -226,6 +371,11 @@ function ContributionDetail({ id, onClose, canReview }: ContributionDetailProps)
       : null;
 
   const { data: referenced } = useReferencedContent(referencedType, data?.contentId ?? null);
+
+  // The server decides this: a report that only describes a fault has nothing
+  // to publish, so it gets resolved (or rejected) instead of approved.
+  const needsDecision = data ? data.actionable === false : false;
+  const openForReview = data ? data.status === 'PENDING' || data.status === 'UNDER_REVIEW' : false;
 
   if (!id) return null;
 
@@ -239,6 +389,12 @@ function ContributionDetail({ id, onClose, canReview }: ContributionDetailProps)
         <div className={detailStyles.wrap}>
           <div className={detailStyles.metaRow}>
             <Pill tone="neutral">{data.type}</Pill>
+            {data.reportKind && (
+              <Pill tone="neutral">{REPORT_KIND_LABELS[data.reportKind]} report</Pill>
+            )}
+            {data.issueCategory && (
+              <Pill tone="warning">{ISSUE_LABELS[data.issueCategory]}</Pill>
+            )}
             <Pill tone={STATUS_TONE[data.status]}>{data.status.replace('_', ' ')}</Pill>
             <span className={detailStyles.muted}>Submitted {formatRelative(data.createdAt)}</span>
             {data.installationId && (
@@ -269,6 +425,14 @@ function ContributionDetail({ id, onClose, canReview }: ContributionDetailProps)
                 {referenced.audio?.url && (
                   <audio controls src={referenced.audio.url} style={{ width: '100%' }} />
                 )}
+                {data.contentSnapshot &&
+                  (data.contentSnapshot.english !== referenced.english ||
+                    data.contentSnapshot.hausa !== referenced.hausa) && (
+                    <p className={detailStyles.muted}>
+                      Changed since this report was filed: “{data.contentSnapshot.english}” / “
+                      {data.contentSnapshot.hausa}”.
+                    </p>
+                  )}
               </div>
             )}
           </div>
@@ -282,13 +446,68 @@ function ContributionDetail({ id, onClose, canReview }: ContributionDetailProps)
               >
                 Mark under review
               </Button>
-              <Button
-                onClick={() => approve.mutate({ id })}
-                loading={approve.isPending}
-              >
-                Approve & publish
-              </Button>
+              {!needsDecision && (
+                <Button
+                  onClick={() => approve.mutate({ id })}
+                  loading={approve.isPending}
+                >
+                  Approve & publish
+                </Button>
+              )}
             </div>
+          )}
+          {needsDecision && openForReview && (
+            <p className={detailStyles.muted}>
+              This report describes a problem instead of proposing wording, so there is nothing to
+              publish. Fix the content, then resolve the report.
+            </p>
+          )}
+          {canReview && needsDecision && openForReview && (
+            <Formik
+              initialValues={{ reviewNotes: '', categoryId: '' }}
+              validationSchema={resolveSchema}
+              onSubmit={async (values, helpers) => {
+                try {
+                  await resolve.mutateAsync({
+                    id,
+                    reviewNotes: values.reviewNotes,
+                    categoryId: values.categoryId || undefined,
+                  });
+                  onClose();
+                } catch (err) {
+                  helpers.setStatus({ form: extractErrorMessage(err, 'Could not resolve.') });
+                } finally {
+                  helpers.setSubmitting(false);
+                }
+              }}
+            >
+              {({ isSubmitting, status }) => (
+                <Form className={detailStyles.rejectForm}>
+                  <Field
+                    as="textarea"
+                    name="reviewNotes"
+                    label="What did you fix?"
+                    placeholder="Moved the phrase to Daily conversation, removed the duplicate…"
+                  />
+                  {data.reportKind === 'PROBLEM' && (
+                    <Field as="select" name="categoryId" label="Move to category">
+                      <option value="">Leave the category unchanged</option>
+                      {(categories ?? []).map((category) => (
+                        <option key={category._id} value={category._id}>
+                          {category.name}
+                        </option>
+                      ))}
+                    </Field>
+                  )}
+                  {status?.form && <p className={styles.errorBox}>{status.form}</p>}
+                  <div className={detailStyles.actions}>
+                    <Button type="submit" loading={isSubmitting || resolve.isPending}>
+                      Resolve report
+                    </Button>
+                  </div>
+                </Form>
+              )}
+            </Formik>
           )}
           {canReview && (data.status === 'UNDER_REVIEW' || data.status === 'PENDING') && (
             <Formik
@@ -337,6 +556,12 @@ function ContributionDetail({ id, onClose, canReview }: ContributionDetailProps)
           {data.status === 'REJECTED' && (
             <p className={detailStyles.muted}>
               Rejected{data.reviewNotes ? ` — “${data.reviewNotes}”` : ''}.
+            </p>
+          )}
+          {data.status === 'RESOLVED' && (
+            <p className={detailStyles.muted}>
+              Resolved{data.reviewedAt ? ` ${formatRelative(data.reviewedAt)}` : ''}
+              {data.reviewNotes ? ` — “${data.reviewNotes}”` : ''}.
             </p>
           )}
         </div>

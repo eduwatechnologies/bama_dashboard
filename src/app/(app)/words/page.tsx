@@ -8,6 +8,7 @@ import { Button } from '@/components/Button';
 import { Modal } from '@/components/Modal';
 import { ResourceTable, type Column } from '@/components/ResourceTable';
 import { Pill } from '@/components/Pill';
+import { PlayButton } from '@/components/PlayButton';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { ContentForm } from '@/components/ContentForm';
 import { extractErrorMessage } from '@/lib/api';
@@ -80,6 +81,22 @@ export default function WordsPage() {
       key: 'category',
       header: 'Category',
       render: (row) => row.categoryId?.name ?? '—',
+    },
+    {
+      key: 'audio',
+      header: 'Audio',
+      render: (row) =>
+        row.audio?.url ? (
+          <div className={styles.audioCell}>
+            <PlayButton src={row.audio.url} label={`pronunciation of ${row.english}`} />
+            {row.audio.duration ? (
+              <span className={styles.cellMuted}>{row.audio.duration}s</span>
+            ) : null}
+          </div>
+        ) : (
+          <Pill tone="neutral">None</Pill>
+        ),
+      width: '160px',
     },
     {
       key: 'status',

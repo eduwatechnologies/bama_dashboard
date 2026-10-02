@@ -346,15 +346,18 @@ This is the review workflow for community submissions from the mobile app. See t
 A contribution's lifecycle:
 ```
 PENDING ──▶ UNDER_REVIEW ──▶ APPROVED   (applies the change to official content)
+   │                    ├──▶ RESOLVED   (report handled by hand, nothing published)
    │                    └──▶ REJECTED
-   └───────────────────────▶ REJECTED
+   └────────────────────────▶ REJECTED
 ```
 `UNDER_REVIEW` is optional — you can approve/reject directly from `PENDING`. It exists so a moderator can "claim" an item while working through the queue.
 
-### `GET /contributions`
-Roles: any. Query: `page`, `limit`, `status` (`PENDING`/`UNDER_REVIEW`/`APPROVED`/`REJECTED`), `type` (`WORD`/`PHRASE`/`TRANSLATION`/`CORRECTION`/`AUDIO`).
+`actionable` is computed server-side on every contribution: it is `false` when approving could not change any published content — a "Report a problem" submission that only describes a fault, or an `AUDIO` contribution whose recording has not been uploaded yet. Those items are closed with **resolve** instead of approve, and the review screen should hide "Approve & publish" when `actionable` is `false`.
 
-Returns `{ items, total }`, sorted newest-first. Build the queue view as `GET /contributions?status=PENDING` by default.
+### `GET /contributions`
+Roles: any. Query: `page`, `limit`, `status` (`PENDING`/`UNDER_REVIEW`/`APPROVED`/`REJECTED`/`RESOLVED`), `type` (`WORD`/`PHRASE`/`TRANSLATION`/`CORRECTION`/`AUDIO`), `reportKind`, `issueCategory`, `actionable` (`true`/`false`).
+
+Returns `{ items, total }`, sorted newest-first. Build the queue view as `GET /contributions?status=PENDING` by default. `actionable=false` is the "needs a human decision" view; `actionable=true` is everything that can be published as-is.
 
 ### `GET /contributions/:id`
 Roles: any. Full contribution document — use this for the review detail screen.
@@ -381,7 +384,29 @@ Any field you send **overrides** what the submitter proposed; omitted fields fal
   }
 }
 ```
-Approving immediately publishes the change and bumps the global content version — it will appear for mobile clients on their next sync. Fails with `400 VALIDATION_ERROR` if already `APPROVED`/`REJECTED`, or (for `AUDIO` type) if no audio has been uploaded yet.
+Approving immediately publishes the change and bumps the global content version — it will appear for mobile clients on their next sync. Fails with `400 VALIDATION_ERROR` if already `APPROVED`/`REJECTED`/`RESOLVED`, if the contribution has nothing to publish (`actionable: false`), or (for `AUDIO` type) if no audio has been uploaded yet.
+
+For a `CORRECTION`, `categoryId` is honoured too, so a "wrong category" report can be moved in the same action.
+
+### `PATCH /contributions/:id/resolve`
+Roles: `SUPER_ADMIN`, `ADMIN`, `MODERATOR`.
+
+Closes a report **without** publishing what the submitter proposed — the fix is the moderator's own. This is how "Report a problem" items are closed, since they describe a fault rather than suggest wording.
+
+**Body**
+```json
+{
+  "reviewNotes": "Moved the phrase to Greetings; it was filed under Food.",
+  "categoryId": "665f1c2e...",
+  "english": "Welcome back",
+  "hausa": "Barka da dawowa"
+}
+```
+`reviewNotes` is **required**. `categoryId`/`english`/`hausa` are optional and, when sent, are applied to the referenced content in the same request (useful for a wrong-category or offensive report), bumping the content version.
+
+**200 response** mirrors approve: `{ "contribution": { "status": "RESOLVED", ... }, "content": <updated Word/Phrase or null> }`.
+
+Fails with `400 VALIDATION_ERROR` if the contribution is already `APPROVED`/`REJECTED`/`RESOLVED`, and if any content fix is sent for a contribution that references no content.
 
 ### `PATCH /contributions/:id/reject`
 Roles: `SUPER_ADMIN`, `ADMIN`, `MODERATOR`.
@@ -399,8 +424,23 @@ Roles: `SUPER_ADMIN`, `ADMIN`, `MODERATOR`.
 | `WORD`        | New word suggestion | `english`, `hausa`, `categoryId`, `notes` | Creates a new **published** Word |
 | `PHRASE`      | New phrase suggestion | `english`, `hausa`, `categoryId`, `notes` | Creates a new **published** Phrase |
 | `TRANSLATION` | Proposes a Hausa translation for existing content | `contentType`, `contentId`, `hausa`, `notes` | Sets `hausa` on the referenced Word/Phrase |
-| `CORRECTION`  | Flags existing content as wrong | `contentType`, `contentId`, `suggestedEnglish`, `suggestedHausa`, `reason` | Applies whichever of `suggestedEnglish`/`suggestedHausa` was submitted (or your override) to the referenced content |
+| `CORRECTION`  | Flags existing content as wrong | `contentType`, `contentId`, `reportKind`, `issueCategory`, `suggestedEnglish`, `suggestedHausa`, `reason` | Applies whichever of `suggestedEnglish`/`suggestedHausa` was submitted (or your override) to the referenced content |
 | `AUDIO`       | Pronunciation recording for existing content | `contentType`, `contentId`, `audio`, `notes` | Sets `audio` on the referenced Word/Phrase to the uploaded recording |
+
+### 10.2 Report modes
+
+The mobile "Suggest a change" sheet offers four modes on existing content, recorded on the contribution so the queue can be triaged without reading every reason:
+
+| `reportKind`    | Sheet mode | Extra field | Publishable |
+|-----------------|------------|-------------|-------------|
+| `PRONUNCIATION` | Record the pronunciation | `audio` (attached by the upload call) | Yes, once the recording is uploaded |
+| `TRANSLATION`   | Suggest a better translation | `suggestedHausa` | Yes |
+| `ENGLISH`       | The English is wrong | `suggestedEnglish` | Yes |
+| `PROBLEM`       | Report a problem | `issueCategory`, `reason` | No — resolve it |
+
+`issueCategory` is one of `DUPLICATE`, `WRONG_CATEGORY`, `OFFENSIVE`, `INACCURATE`, `BROKEN_AUDIO`, `OTHER`, and only ever appears on a `PROBLEM` report. Contributions that reference content also carry `contentSnapshot` (`english`, `hausa`, `status`, `categoryId` as they were when the report was filed) so the queue stays meaningful after the content is edited — diff it against the live content to see whether the report has already been dealt with.
+
+`reportKind` is optional on the wire: clients that predate it are classified server-side (audio → `PRONUNCIATION`, a lone `suggestedHausa` → `TRANSLATION`, a lone `suggestedEnglish` → `ENGLISH`, a reason-only report → `PROBLEM`/`OTHER`).
 
 For `TRANSLATION`, `CORRECTION`, and `AUDIO`, the review screen should fetch and show the **currently official** content (`GET /words/:id` or `GET /phrases/:id`, using `contribution.contentType`/`contribution.contentId`) side-by-side with the submission, so the moderator can compare old vs. proposed — mirroring the "Existing translation" vs. "Submitted Khamuri/Hausa" comparison in the original product spec.
 

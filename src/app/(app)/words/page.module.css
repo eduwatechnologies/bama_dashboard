@@ -53,3 +53,26 @@
   gap: 6px;
   justify-content: flex-end;
 }
+
+.audioCell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.adCell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.thumb {
+  width: 44px;
+  height: 44px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--secondary);
+  flex-shrink: 0;
+}

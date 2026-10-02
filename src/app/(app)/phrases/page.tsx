@@ -8,6 +8,7 @@ import { Button } from '@/components/Button';
 import { Modal } from '@/components/Modal';
 import { ResourceTable, type Column } from '@/components/ResourceTable';
 import { Pill } from '@/components/Pill';
+import { PlayButton } from '@/components/PlayButton';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { PhraseForm } from '@/components/PhraseForm';
 import { extractErrorMessage } from '@/lib/api';
@@ -80,8 +81,18 @@ export default function PhrasesPage() {
     {
       key: 'audio',
       header: 'Audio',
-      render: (row) => (row.audio?.url ? <Pill tone="accent">Linked</Pill> : <Pill tone="neutral">None</Pill>),
-      width: '120px',
+      render: (row) =>
+        row.audio?.url ? (
+          <div className={styles.audioCell}>
+            <PlayButton src={row.audio.url} label={`pronunciation of ${row.english}`} />
+            {row.audio.duration ? (
+              <span className={styles.cellMuted}>{row.audio.duration}s</span>
+            ) : null}
+          </div>
+        ) : (
+          <Pill tone="neutral">None</Pill>
+        ),
+      width: '160px',
     },
     {
       key: 'status',

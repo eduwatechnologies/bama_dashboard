@@ -76,9 +76,14 @@ export default function AdsPage() {
       key: 'name',
       header: 'Ad',
       render: (row) => (
-        <div>
-          <div className={styles.cellPrimary}>{row.name}</div>
-          <div className={styles.cellSecondary}>{providerSummary(row)}</div>
+        <div className={styles.adCell}>
+          {row.personal?.imageUrl ? (
+            <img className={styles.thumb} src={row.personal.imageUrl} alt="" />
+          ) : null}
+          <div>
+            <div className={styles.cellPrimary}>{row.name}</div>
+            <div className={styles.cellSecondary}>{providerSummary(row)}</div>
+          </div>
         </div>
       ),
     },

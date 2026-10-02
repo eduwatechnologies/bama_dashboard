@@ -19,8 +19,21 @@ export interface AdminUser {
 
 export type ContentStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
 export type CategoryStatus = 'ACTIVE' | 'INACTIVE';
-export type ContributionStatus = 'PENDING' | 'UNDER_REVIEW' | 'APPROVED' | 'REJECTED';
+export type ContributionStatus =
+  | 'PENDING'
+  | 'UNDER_REVIEW'
+  | 'APPROVED'
+  | 'REJECTED'
+  | 'RESOLVED';
 export type ContributionType = 'WORD' | 'PHRASE' | 'TRANSLATION' | 'CORRECTION' | 'AUDIO';
+export type ReportKind = 'PRONUNCIATION' | 'TRANSLATION' | 'ENGLISH' | 'PROBLEM';
+export type IssueCategory =
+  | 'DUPLICATE'
+  | 'WRONG_CATEGORY'
+  | 'OFFENSIVE'
+  | 'INACCURATE'
+  | 'BROKEN_AUDIO'
+  | 'OTHER';
 export type ContentType = 'WORD' | 'PHRASE';
 export type ContributionContentType = 'word' | 'phrase';
 
@@ -103,6 +116,7 @@ export interface PersonalAdPayload {
   title: string;
   body: string;
   imageUrl?: string;
+  imageUrls?: string[];
   targetUrl?: string;
   ctaText?: string;
 }
@@ -142,8 +156,18 @@ export interface Contribution {
   _id: string;
   type: ContributionType;
   status: ContributionStatus;
+  reportKind?: ReportKind;
+  issueCategory?: IssueCategory;
+  /** True when approving would change published content. */
+  actionable?: boolean;
   contentType?: ContributionContentType;
   contentId?: string;
+  contentSnapshot?: {
+    english?: string;
+    hausa?: string;
+    status?: string;
+    categoryId?: string;
+  };
   english?: string;
   hausa?: string;
   suggestedEnglish?: string;

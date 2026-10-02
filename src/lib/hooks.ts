@@ -10,6 +10,8 @@ import type {
   Contribution,
   ContributionStatus,
   ContributionType,
+  IssueCategory,
+  ReportKind,
   DashboardSummary,
   Ad,
   AdStatus,
@@ -332,6 +334,9 @@ export interface ContributionsParams {
   limit?: number;
   status?: ContributionStatus;
   type?: ContributionType;
+  reportKind?: ReportKind;
+  issueCategory?: IssueCategory;
+  actionable?: boolean;
 }
 
 export function useContributions(params: ContributionsParams) {
@@ -412,5 +417,31 @@ export function useRejectContribution() {
       return data.data;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['contributions'] }),
+  });
+}
+
+export function useResolveContribution() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      id,
+      reviewNotes,
+      categoryId,
+    }: {
+      id: string;
+      reviewNotes: string;
+      categoryId?: string;
+    }) => {
+      const { data } = await api.patch<{ success: true; data: { contribution: Contribution } }>(
+        `/contributions/${id}/resolve`,
+        { reviewNotes, ...(categoryId ? { categoryId } : {}) },
+      );
+      return data.data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['contributions'] });
+      qc.invalidateQueries({ queryKey: ['phrases'] });
+      qc.invalidateQueries({ queryKey: ['words'] });
+    },
   });
 }

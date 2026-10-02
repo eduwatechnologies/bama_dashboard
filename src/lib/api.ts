@@ -101,3 +101,37 @@ export function extractFieldErrors(
   }
   return undefined;
 }
+
+export interface UploadedImage {
+  url: string;
+  storageKey?: string;
+  mimeType?: string;
+  size?: number;
+}
+
+/**
+ * Multipart upload that reuses the configured axios instance so the admin
+ * bearer token and the 401 refresh flow still apply.
+ *
+ * The per-request Content-Type override is required: the instance defaults to
+ * `application/json`, and axios serializes FormData as JSON whenever that
+ * header is present, which would drop the file. Once the header is
+ * `multipart/form-data`, axios lets the browser attach the boundary.
+ */
+export async function uploadImage(
+  form: FormData,
+  onProgress?: (percent: number) => void,
+): Promise<UploadedImage> {
+  const { data } = await api.post<{ success: true; data: UploadedImage }>(
+    '/images/upload?scope=ads',
+    form,
+    {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      onUploadProgress: (event) => {
+        if (!onProgress || !event.total) return;
+        onProgress(Math.min(100, Math.round((event.loaded / event.total) * 100)));
+      },
+    },
+  );
+  return data.data;
+}
