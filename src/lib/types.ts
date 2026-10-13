@@ -45,6 +45,23 @@ export interface AudioMeta {
   duration?: number;
 }
 
+export interface Language {
+  _id?: string;
+  code: string;
+  name: string;
+  nativeName: string;
+  isRTL: boolean;
+  flag: string;
+  isActive: boolean;
+  order: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export type Translations = Record<string, string>;
+export type AudioMap = Record<string, AudioMeta | string | null>;
+export type ExampleSentenceMap = Record<string, string>;
+
 export interface CategoryRef {
   _id: string;
   name: string;
@@ -59,31 +76,26 @@ export interface Category extends CategoryRef {
   updatedAt: string;
 }
 
-export interface ExampleSentence {
-  english?: string;
-  hausa?: string;
-}
-
 export interface Word {
   _id: string;
-  english: string;
-  hausa: string;
+  translations: Translations;
   description?: string;
   categoryId: CategoryRef;
-  exampleSentence?: ExampleSentence;
-  audio?: AudioMeta;
+  exampleSentence?: ExampleSentenceMap;
+  audio?: AudioMap;
   status: ContentStatus;
+  version?: number;
   createdAt: string;
   updatedAt: string;
 }
 
 export interface Phrase {
   _id: string;
-  english: string;
-  hausa: string;
+  translations: Translations;
   categoryId: CategoryRef;
-  audio?: AudioMeta;
+  audio?: AudioMap;
   status: ContentStatus;
+  version?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -174,6 +186,8 @@ export interface Contribution {
   suggestedHausa?: string;
   reason?: string;
   notes?: string;
+  /** Which language an AUDIO contribution pronounces (e.g. 'ha'). */
+  language?: string;
   categoryId?: CategoryRef | string;
   audio?: AudioMeta;
   installationId: string;

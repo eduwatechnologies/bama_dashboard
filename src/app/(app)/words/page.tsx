@@ -2,13 +2,14 @@
 
 import { useMemo, useState } from 'react';
 import { useAuth } from '@/lib/auth';
-import { useCategories, useDeleteWord, useWords } from '@/lib/hooks';
+import { useActiveLanguages, useCategories, useDeleteWord, useWords } from '@/lib/hooks';
 import { Card } from '@/components/Card';
 import { Button } from '@/components/Button';
 import { Modal } from '@/components/Modal';
 import { ResourceTable, type Column } from '@/components/ResourceTable';
 import { Pill } from '@/components/Pill';
-import { PlayButton } from '@/components/PlayButton';
+import { AudioCell } from '@/components/AudioCell';
+import { ActionMenu } from '@/components/ActionMenu';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { ContentForm } from '@/components/ContentForm';
 import { extractErrorMessage } from '@/lib/api';
@@ -49,99 +50,120 @@ export default function WordsPage() {
     category: category || undefined,
   });
   const { data: categories = [] } = useCategories();
+  const { data: activeLanguages = [] } = useActiveLanguages();
 
   const deleteWord = useDeleteWord();
+
+  const baseCode = activeLanguages.find((l) => l.code === 'en')?.code ?? activeLanguages[0]?.code ?? 'en';
+  const otherLangs = activeLanguages.filter((l) => l.code !== baseCode);
+  const languageNames = activeLanguages.reduce<Record<string, string>>((acc, l) => {
+    acc[l.code] = l.name;
+    return acc;
+  }, {});
 
   const rows = useMemo(() => {
     if (!data) return [];
     const q = search.trim().toLowerCase();
     if (!q) return data.items;
-    return data.items.filter(
-      (w) => w.english.toLowerCase().includes(q) || w.hausa.toLowerCase().includes(q),
+    return data.items.filter((w) =>
+      Object.values(w.translations ?? {}).some((text) => text.toLowerCase().includes(q)),
     );
   }, [data, search]);
 
-  const columns: Column<Word>[] = [
-    {
-      key: 'english',
-      header: 'English',
-      render: (row) => (
-        <div>
-          <div className={styles.cellPrimary}>{row.english}</div>
-          <div className={styles.cellSecondary}>{row.description || '—'}</div>
-        </div>
-      ),
-    },
-    {
-      key: 'hausa',
-      header: 'Hausa',
-      render: (row) => <span className={styles.cellPrimary}>{row.hausa}</span>,
-    },
-    {
-      key: 'category',
-      header: 'Category',
-      render: (row) => row.categoryId?.name ?? '—',
-    },
-    {
-      key: 'audio',
-      header: 'Audio',
-      render: (row) =>
-        row.audio?.url ? (
-          <div className={styles.audioCell}>
-            <PlayButton src={row.audio.url} label={`pronunciation of ${row.english}`} />
-            {row.audio.duration ? (
-              <span className={styles.cellMuted}>{row.audio.duration}s</span>
-            ) : null}
+  const columns: Column<Word>[] = useMemo(() => {
+    const cols: Column<Word>[] = [
+      {
+        key: 'translations',
+        header: activeLanguages.find((l) => l.code === baseCode)?.name ?? 'English',
+        render: (row) => (
+          <div>
+            <div className={styles.cellPrimary}>{row.translations?.[baseCode] ?? '—'}</div>
+            <div className={styles.cellSecondary}>{row.description || '—'}</div>
           </div>
-        ) : (
-          <Pill tone="neutral">None</Pill>
         ),
-      width: '160px',
-    },
-    {
-      key: 'status',
-      header: 'Status',
-      render: (row) => <Pill tone={STATUS_TONE[row.status]}>{row.status}</Pill>,
-      width: '130px',
-    },
-    {
-      key: 'updated',
-      header: 'Updated',
-      render: (row) => <span className={styles.cellMuted}>{formatRelative(row.updatedAt)}</span>,
-      width: '140px',
-    },
-    {
-      key: 'actions',
-      header: '',
-      render: (row) => (
-        <div className={styles.rowActions}>
-          {canEdit && (
-            <Button size="sm" variant="secondary" onClick={() => setEditing(row)}>
-              Edit
-            </Button>
-          )}
-          {canDelete && (
-            <ConfirmDialog
-              title="Archive this word?"
-              description={`“${row.english}” will be soft-deleted and removed from the next mobile sync.`}
-              confirmLabel="Archive"
-              destructive
-              onConfirm={async () => {
-                await deleteWord.mutateAsync(row._id);
-              }}
-              trigger={(open) => (
-                <Button size="sm" variant="destructive" onClick={open}>
-                  Archive
-                </Button>
-              )}
+      },
+    ];
+
+    otherLangs.forEach((l) => {
+      cols.push({
+        key: `translation-${l.code}`,
+        header: l.name,
+        render: (row) => <span className={styles.cellPrimary}>{row.translations?.[l.code] ?? '—'}</span>,
+      });
+    });
+
+    cols.push(
+      {
+        key: 'category',
+        header: 'Category',
+        render: (row) => row.categoryId?.name ?? '—',
+      },
+      {
+        key: 'audio',
+        header: 'Audio',
+        render: (row) => {
+          const audioEntries = Object.entries(row.audio ?? {})
+            .map(([code, audio]: [string, any]) => {
+              const url = typeof audio === 'string' ? audio : audio?.url ?? null;
+              return { code, url };
+            })
+            .filter((e) => e.url);
+          return (
+            <AudioCell
+              entries={audioEntries}
+              label={row.translations?.[baseCode] ?? 'word'}
+              languageNames={languageNames}
             />
-          )}
-        </div>
-      ),
-      width: '180px',
-      sticky: true,
-    },
-  ];
+          );
+        },
+        width: '160px',
+      },
+      {
+        key: 'status',
+        header: 'Status',
+        render: (row) => <Pill tone={STATUS_TONE[row.status]}>{row.status}</Pill>,
+        width: '130px',
+      },
+      {
+        key: 'updated',
+        header: 'Updated',
+        render: (row) => <span className={styles.cellMuted}>{formatRelative(row.updatedAt)}</span>,
+        width: '140px',
+      },
+      {
+        key: 'actions',
+        header: '',
+        render: (row) => (
+          <ConfirmDialog
+            title="Archive this word?"
+            description={`“${row.translations?.[baseCode] ?? ''}” will be soft-deleted and removed from the next mobile sync.`}
+            confirmLabel="Archive"
+            destructive
+            onConfirm={async () => {
+              await deleteWord.mutateAsync(row._id);
+            }}
+            trigger={(open) => (
+              <ActionMenu
+                ariaLabel={`Actions for ${row.translations?.[baseCode] ?? 'word'}`}
+                items={[
+                  ...(canEdit
+                    ? [{ label: 'Edit', onClick: () => setEditing(row) }]
+                    : []),
+                  ...(canDelete
+                    ? [{ label: 'Archive', variant: 'destructive' as const, onClick: open }]
+                    : []),
+                ]}
+              />
+            )}
+          />
+        ),
+        width: '60px',
+        sticky: true,
+      },
+    );
+
+    return cols;
+  }, [activeLanguages, baseCode, otherLangs, canEdit, canDelete, deleteWord]);
 
   return (
     <>
@@ -171,7 +193,7 @@ export default function WordsPage() {
           pageSize={pageSize}
           total={data?.total ?? 0}
           onPageChange={setPage}
-          search={{ value: search, onChange: setSearch, placeholder: 'Search English or Hausa…' }}
+          search={{ value: search, onChange: setSearch, placeholder: 'Search translations…' }}
           filters={[
             {
               label: 'Status',

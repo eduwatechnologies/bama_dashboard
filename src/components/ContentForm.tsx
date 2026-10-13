@@ -2,88 +2,118 @@
 
 import { Form, Formik } from 'formik';
 import * as Yup from 'yup';
-import { useCategories, useCreateWord, useUpdateWord, type WordInput } from '@/lib/hooks';
+import {
+  useActiveLanguages,
+  useCategories,
+  useCreateWord,
+  useUpdateWord,
+  type WordInput,
+} from '@/lib/hooks';
 import { Field } from './Field';
 import { Button } from './Button';
 import { AudioRecorderField } from './AudioRecorderField';
+import { Tabs } from './Tabs';
 import type { ContentStatus, Word } from '@/lib/types';
 import { extractFieldErrors, extractErrorMessage } from '@/lib/api';
 import styles from './ContentForm.module.css';
 
 const STATUS_OPTIONS: ContentStatus[] = ['DRAFT', 'PUBLISHED', 'ARCHIVED'];
 
-const schema = Yup.object({
-  english: Yup.string().min(1, 'Required.').required('Required.'),
-  hausa: Yup.string().min(1, 'Required.').required('Required.'),
-  categoryId: Yup.string().required('Choose a category.'),
-  description: Yup.string().max(500, 'Keep it under 500 characters.'),
-  exampleEnglish: Yup.string().max(200),
-  exampleHausa: Yup.string().max(200),
-  audioUrl: Yup.string(),
-  status: Yup.string().oneOf(STATUS_OPTIONS).required(),
-});
+type RecordedAudio = { url: string; storageKey?: string; mimeType?: string; sizeBytes?: number; duration?: number } | null;
 
 interface FormValues {
-  english: string;
-  hausa: string;
+  translations: Record<string, string>;
   categoryId: string;
   description: string;
-  exampleEnglish: string;
-  exampleHausa: string;
-  audioUrl: string;
+  exampleSentence: Record<string, string>;
+  audioUrls: Record<string, string>;
+  recordedAudio: Record<string, RecordedAudio>;
   status: ContentStatus;
-  recordedAudio?: { url: string; storageKey?: string; mimeType?: string; sizeBytes?: number; duration?: number } | null;
 }
 
-function fromWord(word: Word): FormValues {
+function buildInitialValues(activeLangs: Array<{ code: string }>): FormValues {
+  const translations: Record<string, string> = {};
+  const exampleSentence: Record<string, string> = {};
+  const audioUrls: Record<string, string> = {};
+  const recordedAudio: Record<string, RecordedAudio> = {};
+  activeLangs.forEach((l) => {
+    translations[l.code] = '';
+    exampleSentence[l.code] = '';
+    audioUrls[l.code] = '';
+    recordedAudio[l.code] = null;
+  });
   return {
-    english: word.english,
-    hausa: word.hausa,
-    categoryId: word.categoryId?._id ?? '',
-    description: word.description ?? '',
-    exampleEnglish: word.exampleSentence?.english ?? '',
-    exampleHausa: word.exampleSentence?.hausa ?? '',
-    audioUrl: word.audio?.url ?? '',
-    status: word.status,
-    recordedAudio: word.audio
-      ? { url: word.audio.url, storageKey: word.audio.storageKey, mimeType: word.audio.mimeType, sizeBytes: word.audio.size, duration: word.audio.duration }
-      : null,
+    translations,
+    categoryId: '',
+    description: '',
+    exampleSentence,
+    audioUrls,
+    recordedAudio,
+    status: 'DRAFT',
   };
 }
 
-const initialValues: FormValues = {
-  english: '',
-  hausa: '',
-  categoryId: '',
-  description: '',
-  exampleEnglish: '',
-  exampleHausa: '',
-  audioUrl: '',
-  status: 'DRAFT',
-  recordedAudio: null,
-};
+function fromWord(word: Word, activeLangs: Array<{ code: string }>): FormValues {
+  const base = buildInitialValues(activeLangs);
+  base.translations = { ...base.translations, ...(word.translations ?? {}) };
+  base.categoryId = word.categoryId?._id ?? '';
+  base.description = word.description ?? '';
+  base.exampleSentence = { ...base.exampleSentence, ...(word.exampleSentence ?? {}) };
+  base.status = word.status;
+
+  Object.entries(word.audio ?? {}).forEach(([code, audio]: [string, any]) => {
+    const url = typeof audio === 'string' ? audio : audio?.url;
+    if (url) {
+      base.audioUrls[code] = url;
+      const meta = typeof audio === 'object' && audio ? audio : {};
+      base.recordedAudio[code] = {
+        url,
+        storageKey: meta.storageKey,
+        mimeType: meta.mimeType,
+        sizeBytes: meta.size,
+        duration: meta.duration,
+      };
+    }
+  });
+  return base;
+}
 
 function toInput(values: FormValues): WordInput {
-  const audio =
-    values.recordedAudio?.url
-      ? { url: values.recordedAudio.url, storageKey: values.recordedAudio.storageKey, mimeType: values.recordedAudio.mimeType, size: values.recordedAudio.sizeBytes, duration: values.recordedAudio.duration }
-      : values.audioUrl.trim()
-        ? { url: values.audioUrl.trim() }
-        : undefined;
+  const translations: Record<string, string> = {};
+  Object.entries(values.translations).forEach(([code, text]) => {
+    const trimmed = text.trim();
+    if (trimmed) translations[code] = trimmed;
+  });
+
+  const exampleSentence: Record<string, string> = {};
+  Object.entries(values.exampleSentence).forEach(([code, text]) => {
+    const trimmed = text.trim();
+    if (trimmed) exampleSentence[code] = trimmed;
+  });
+
+  const audio: WordInput['audio'] = {};
+  Object.entries(values.translations).forEach(([code]) => {
+    const recorded = values.recordedAudio[code];
+    const url = recorded?.url ?? values.audioUrls[code]?.trim();
+    if (recorded) {
+      audio[code] = {
+        url: recorded.url,
+        storageKey: recorded.storageKey,
+        mimeType: recorded.mimeType,
+        size: recorded.sizeBytes,
+        duration: recorded.duration,
+      };
+    } else if (url) {
+      audio[code] = { url };
+    }
+  });
 
   return {
-    english: values.english.trim(),
-    hausa: values.hausa.trim(),
+    translations,
     categoryId: values.categoryId,
     description: values.description.trim() || undefined,
-    exampleSentence:
-      values.exampleEnglish.trim() || values.exampleHausa.trim()
-        ? {
-            english: values.exampleEnglish.trim() || undefined,
-            hausa: values.exampleHausa.trim() || undefined,
-          }
-        : undefined,
-    audio,
+    exampleSentence: Object.keys(exampleSentence).length ? exampleSentence : undefined,
+    audio: Object.keys(audio).length ? audio : undefined,
     status: values.status,
   };
 }
@@ -95,11 +125,35 @@ interface ContentFormProps {
 
 export function ContentForm({ initial, onDone }: ContentFormProps) {
   const { data: categories = [] } = useCategories();
+  const { data: activeLanguages = [], isLoading: langsLoading } = useActiveLanguages();
   const createWord = useCreateWord();
   const updateWord = useUpdateWord();
 
   const isEdit = Boolean(initial);
-  const baseValues = initial ? fromWord(initial) : initialValues;
+
+  if (langsLoading) {
+    return <div className={styles.form}>Loading languages…</div>;
+  }
+
+  const schema = Yup.object({
+    translations: Yup.object(
+      activeLanguages.reduce<Record<string, Yup.StringSchema>>((acc, l) => {
+        acc[l.code] = Yup.string().min(1, 'Required.').required('Required.');
+        return acc;
+      }, {}),
+    ),
+    categoryId: Yup.string().required('Choose a category.'),
+    description: Yup.string().max(500, 'Keep it under 500 characters.'),
+    exampleSentence: Yup.object(
+      activeLanguages.reduce<Record<string, Yup.StringSchema>>((acc, l) => {
+        acc[l.code] = Yup.string().max(200);
+        return acc;
+      }, {}),
+    ),
+    status: Yup.string().oneOf(STATUS_OPTIONS).required(),
+  });
+
+  const baseValues = initial ? fromWord(initial, activeLanguages) : buildInitialValues(activeLanguages);
 
   return (
     <Formik
@@ -129,8 +183,14 @@ export function ContentForm({ initial, onDone }: ContentFormProps) {
       {({ isSubmitting, setFieldValue, values, status: formStatus }) => (
         <Form className={styles.form}>
           <div className={styles.grid}>
-            <Field name="english" label="English" placeholder="e.g. Water" />
-            <Field name="hausa" label="Hausa" placeholder="e.g. Ruwa" />
+            {activeLanguages.map((l) => (
+              <Field
+                key={l.code}
+                name={`translations.${l.code}`}
+                label={`${l.name} (${l.code})`}
+                placeholder={l.code === 'en' ? 'e.g. Water' : `Translation in ${l.name}`}
+              />
+            ))}
           </div>
           <label className={styles.field}>
             <span className={styles.label}>Category</span>
@@ -138,22 +198,54 @@ export function ContentForm({ initial, onDone }: ContentFormProps) {
           </label>
           <Field name="description" label="Description" placeholder="Optional context for editors" />
           <div className={styles.grid}>
-            <Field name="exampleEnglish" label="Example · English" placeholder="Give me water." />
-            <Field name="exampleHausa" label="Example · Hausa" placeholder="Ba ni ruwa." />
+            {activeLanguages.map((l) => (
+              <Field
+                key={l.code}
+                name={`exampleSentence.${l.code}`}
+                label={`Example · ${l.name}`}
+                placeholder={l.code === 'en' ? 'Give me water.' : `Example in ${l.name}`}
+              />
+            ))}
           </div>
-          <Field name="audioUrl" label="Audio URL" placeholder="https://…" hint="Paste an existing URL, or record one below." />
-          <AudioRecorderField
-            label="Record audio"
-            hint="Speak the word clearly. Max 15s. Saved directly to Cloudinary."
-            value={(values.recordedAudio as typeof initialValues.recordedAudio) ?? null}
-            onChange={(next) => {
-              setFieldValue('recordedAudio', next);
-              if (next?.url) {
-                setFieldValue('audioUrl', next.url);
-              }
-            }}
-            disabled={isSubmitting}
-          />
+          {activeLanguages.length > 0 && (
+            <Tabs
+              tabs={activeLanguages.map((l) => ({
+                id: l.code,
+                label: (
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span>{l.flag}</span>
+                    <span>{l.name}</span>
+                  </span>
+                ),
+              }))}
+            >
+              {(tabId) => {
+                const l = activeLanguages.find((lang) => lang.code === tabId) ?? activeLanguages[0];
+                return (
+                  <div className={styles.field}>
+                    <Field
+                      name={`audioUrls.${l.code}`}
+                      label={`Audio URL · ${l.name}`}
+                      placeholder="https://…"
+                      hint="Paste an existing URL, or record one below."
+                    />
+                    <AudioRecorderField
+                      label={`Record audio · ${l.name}`}
+                      hint={`Speak the word in ${l.name}. Max 15s. Saved directly to Cloudinary.`}
+                      value={(values.recordedAudio[l.code] as RecordedAudio) ?? null}
+                      onChange={(next) => {
+                        setFieldValue(`recordedAudio.${l.code}`, next);
+                        if (next?.url) {
+                          setFieldValue(`audioUrls.${l.code}`, next.url);
+                        }
+                      }}
+                      disabled={isSubmitting}
+                    />
+                  </div>
+                );
+              }}
+            </Tabs>
+          )}
           <label className={styles.field}>
             <span className={styles.label}>Status</span>
             <FieldSelect name="status" options={STATUS_OPTIONS.map((s) => ({ value: s, label: s }))} />

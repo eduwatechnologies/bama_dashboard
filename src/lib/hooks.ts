@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from './api';
 import type {
+  AudioMeta,
   Category,
   CategoryStatus,
   ContentStatus,
@@ -11,6 +12,7 @@ import type {
   ContributionStatus,
   ContributionType,
   IssueCategory,
+  Language,
   ReportKind,
   DashboardSummary,
   Ad,
@@ -86,12 +88,11 @@ export function useWord(id: string | null) {
 }
 
 export type WordInput = {
-  english: string;
-  hausa: string;
+  translations: Record<string, string>;
   description?: string;
   categoryId: string;
-  exampleSentence?: { english?: string; hausa?: string };
-  audio?: { url?: string; storageKey?: string; duration?: number; mimeType?: string };
+  exampleSentence?: Record<string, string>;
+  audio?: Record<string, AudioMeta | null>;
   status?: ContentStatus;
 };
 
@@ -162,10 +163,9 @@ export function usePhrase(id: string | null) {
 }
 
 export type PhraseInput = {
-  english: string;
-  hausa: string;
+  translations: Record<string, string>;
   categoryId: string;
-  audio?: { url?: string; storageKey?: string; duration?: number; mimeType?: string };
+  audio?: Record<string, AudioMeta | null>;
   status?: ContentStatus;
 };
 
@@ -443,5 +443,66 @@ export function useResolveContribution() {
       qc.invalidateQueries({ queryKey: ['phrases'] });
       qc.invalidateQueries({ queryKey: ['words'] });
     },
+  });
+}
+
+export function useLanguages() {
+  return useQuery({
+    queryKey: ['languages'],
+    queryFn: async () => {
+      const { data } = await api.get<{ success: true; data: Language[] }>('/languages');
+      return data.data;
+    },
+  });
+}
+
+export function useActiveLanguages() {
+  const { data, ...rest } = useLanguages();
+  return {
+    data: data?.filter((l) => l.isActive) ?? [],
+    ...rest,
+  };
+}
+
+export type LanguageInput = {
+  code: string;
+  name: string;
+  nativeName?: string;
+  isRTL?: boolean;
+  flag?: string;
+  isActive?: boolean;
+  order?: number;
+};
+
+export function useCreateLanguage() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: LanguageInput) => {
+      const { data } = await api.post<{ success: true; data: Language }>('/languages', input);
+      return data.data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['languages'] }),
+  });
+}
+
+export function useUpdateLanguage() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ code, input }: { code: string; input: Partial<LanguageInput> }) => {
+      const { data } = await api.patch<{ success: true; data: Language }>(`/languages/${code}`, input);
+      return data.data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['languages'] }),
+  });
+}
+
+export function useDeleteLanguage() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (code: string) => {
+      const { data } = await api.delete<{ success: true; data: Language }>(`/languages/${code}`);
+      return data.data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['languages'] }),
   });
 }

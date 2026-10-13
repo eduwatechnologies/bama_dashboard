@@ -126,7 +126,7 @@ export default function ContributionsPage() {
     const q = search.trim().toLowerCase();
     if (!q) return data.items;
     return data.items.filter((c) => {
-      const blob = `${c.english ?? ''} ${c.hausa ?? ''} ${c.suggestedEnglish ?? ''} ${c.suggestedHausa ?? ''} ${c.reason ?? ''} ${c.contentSnapshot?.english ?? ''}`.toLowerCase();
+      const blob = `${c.english ?? ''} ${c.hausa ?? ''} ${c.suggestedEnglish ?? ''} ${c.suggestedHausa ?? ''} ${c.reason ?? ''} ${c.language ?? ''} ${c.contentSnapshot?.english ?? ''}`.toLowerCase();
       return blob.includes(q);
     });
   }, [data, search]);
@@ -409,25 +409,39 @@ function ContributionDetail({ id, onClose, canReview }: ContributionDetailProps)
               <ReadOnlyField label="Hausa">{data.hausa ?? data.suggestedHausa}</ReadOnlyField>
               {data.reason && <ReadOnlyField label="Reason">{data.reason}</ReadOnlyField>}
               {data.notes && <ReadOnlyField label="Notes">{data.notes}</ReadOnlyField>}
-              {data.audio?.url && (
-                <div>
-                  <p className={detailStyles.label}>Recording</p>
-                  <audio controls src={data.audio.url} style={{ width: '100%' }} />
-                </div>
-              )}
+              {(() => {
+                const audio = data.audio as any;
+                const url = typeof audio === 'string' ? audio : audio?.url;
+                return url ? (
+                  <div>
+                    <p className={detailStyles.label}>
+                      Recording{data.language ? ` · ${data.language.toUpperCase()}` : ''}
+                    </p>
+                    <audio controls src={url} style={{ width: '100%' }} />
+                  </div>
+                ) : null;
+              })()}
             </div>
             {referenced && (
               <div className={detailStyles.card}>
                 <h3>Currently published</h3>
-                <ReadOnlyField label="English">{referenced.english}</ReadOnlyField>
-                <ReadOnlyField label="Hausa">{referenced.hausa}</ReadOnlyField>
+                {Object.entries(referenced.translations ?? {}).map(([code, text]) => (
+                  <ReadOnlyField key={code} label={code.toUpperCase()}>{text}</ReadOnlyField>
+                ))}
                 <ReadOnlyField label="Status">{referenced.status}</ReadOnlyField>
-                {referenced.audio?.url && (
-                  <audio controls src={referenced.audio.url} style={{ width: '100%' }} />
-                )}
+                {Object.entries(referenced.audio ?? {}).map(([code, audio]: [string, any]) => {
+                  const url = typeof audio === 'string' ? audio : audio?.url;
+                  if (!url) return null;
+                  return (
+                    <div key={code}>
+                      <p className={detailStyles.label}>Recording · {code.toUpperCase()}</p>
+                      <audio controls src={url} style={{ width: '100%' }} />
+                    </div>
+                  );
+                })}
                 {data.contentSnapshot &&
-                  (data.contentSnapshot.english !== referenced.english ||
-                    data.contentSnapshot.hausa !== referenced.hausa) && (
+                  (data.contentSnapshot.english !== referenced.translations?.en ||
+                    data.contentSnapshot.hausa !== referenced.translations?.ha) && (
                     <p className={detailStyles.muted}>
                       Changed since this report was filed: “{data.contentSnapshot.english}” / “
                       {data.contentSnapshot.hausa}”.

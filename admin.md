@@ -425,7 +425,7 @@ Roles: `SUPER_ADMIN`, `ADMIN`, `MODERATOR`.
 | `PHRASE`      | New phrase suggestion | `english`, `hausa`, `categoryId`, `notes` | Creates a new **published** Phrase |
 | `TRANSLATION` | Proposes a Hausa translation for existing content | `contentType`, `contentId`, `hausa`, `notes` | Sets `hausa` on the referenced Word/Phrase |
 | `CORRECTION`  | Flags existing content as wrong | `contentType`, `contentId`, `reportKind`, `issueCategory`, `suggestedEnglish`, `suggestedHausa`, `reason` | Applies whichever of `suggestedEnglish`/`suggestedHausa` was submitted (or your override) to the referenced content |
-| `AUDIO`       | Pronunciation recording for existing content | `contentType`, `contentId`, `audio`, `notes` | Sets `audio` on the referenced Word/Phrase to the uploaded recording |
+| `AUDIO`       | Pronunciation recording for existing content | `contentType`, `contentId`, `audio`, `notes`, `language` | Merges the recording into the referenced Word/Phrase's per-language `audio` map under `language` (default `ha`), preserving recordings already stored under other languages |
 
 ### 10.2 Report modes
 
