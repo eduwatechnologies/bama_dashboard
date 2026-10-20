@@ -59,7 +59,7 @@ export interface Language {
 }
 
 export type Translations = Record<string, string>;
-export type AudioMap = Record<string, AudioMeta | string | null>;
+export type AudioMap = Record<string, AudioMeta | null>;
 export type ExampleSentenceMap = Record<string, string>;
 
 export interface CategoryRef {
