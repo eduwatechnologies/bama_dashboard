@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useAuth } from '@/lib/auth';
-import { useAds, useArchiveAd } from '@/lib/hooks';
+import { useAds, useAdStats, useArchiveAd } from '@/lib/hooks';
 import { Card } from '@/components/Card';
 import { Button } from '@/components/Button';
 import { Modal } from '@/components/Modal';
@@ -50,6 +50,84 @@ function scheduleSummary(ad: Ad): string {
   return `${start} → ${end}`;
 }
 
+const formatCount = (n: number) => n.toLocaleString();
+
+const formatCtr = (ctr: number) => `${(ctr * 100).toFixed(1)}%`;
+
+function AdStatsModal({ ad, onClose }: { ad: Ad | null; onClose: () => void }) {
+  const { data, isLoading, isError } = useAdStats(ad?._id ?? null);
+
+  const cards = data
+    ? [
+        { label: 'Impressions', value: formatCount(data.impressions) },
+        { label: 'Clicks', value: formatCount(data.clicks) },
+        { label: 'CTR', value: formatCtr(data.ctr) },
+        { label: 'Unique installs', value: formatCount(data.uniqueInstallations) },
+      ]
+    : [];
+
+  return (
+    <Modal
+      open={Boolean(ad)}
+      onClose={onClose}
+      title={ad ? `Performance — ${ad.name}` : 'Performance'}
+      description={ad ? `Placement ${ad.placement}` : undefined}
+      size="lg"
+    >
+      {isLoading && <p className={styles.cellMuted}>Loading…</p>}
+      {isError && <p className={styles.cellMuted}>Could not load performance for this ad.</p>}
+      {data && (
+        <>
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
+            {cards.map((card) => (
+              <div
+                key={card.label}
+                style={{
+                  flex: '1 1 120px',
+                  border: '1px solid var(--border, #e5e7eb)',
+                  borderRadius: 8,
+                  padding: '12px 16px',
+                }}
+              >
+                <div className={styles.cellSecondary}>{card.label}</div>
+                <div className={styles.cellPrimary} style={{ fontSize: 20 }}>
+                  {card.value}
+                </div>
+              </div>
+            ))}
+          </div>
+          {data.series.length > 0 ? (
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr>
+                  <th style={{ textAlign: 'left', padding: '6px 0' }}>Date</th>
+                  <th style={{ textAlign: 'right', padding: '6px 0' }}>Impressions</th>
+                  <th style={{ textAlign: 'right', padding: '6px 0' }}>Clicks</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.series.map((point) => (
+                  <tr key={point.date}>
+                    <td style={{ padding: '6px 0' }}>{point.date}</td>
+                    <td style={{ textAlign: 'right', padding: '6px 0' }}>
+                      {formatCount(point.impressions)}
+                    </td>
+                    <td style={{ textAlign: 'right', padding: '6px 0' }}>
+                      {formatCount(point.clicks)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <p className={styles.cellMuted}>No activity recorded yet.</p>
+          )}
+        </>
+      )}
+    </Modal>
+  );
+}
+
 export default function AdsPage() {
   const { admin } = useAuth();
   const canWrite = admin?.role === 'SUPER_ADMIN' || admin?.role === 'ADMIN';
@@ -61,6 +139,7 @@ export default function AdsPage() {
   const [status, setStatus] = useState<'' | AdStatus>('');
   const [editing, setEditing] = useState<Ad | null>(null);
   const [creating, setCreating] = useState(false);
+  const [statsAd, setStatsAd] = useState<Ad | null>(null);
 
   const { data, isLoading, isError, error, isFetching } = useAds({
     page,
@@ -118,6 +197,30 @@ export default function AdsPage() {
       width: '100px',
     },
     {
+      key: 'impressions',
+      header: 'Impr.',
+      render: (row) => (
+        <span className={styles.cellMuted}>{formatCount(row.metrics?.impressions ?? 0)}</span>
+      ),
+      width: '90px',
+    },
+    {
+      key: 'clicks',
+      header: 'Clicks',
+      render: (row) => (
+        <span className={styles.cellMuted}>{formatCount(row.metrics?.clicks ?? 0)}</span>
+      ),
+      width: '90px',
+    },
+    {
+      key: 'ctr',
+      header: 'CTR',
+      render: (row) => (
+        <span className={styles.cellMuted}>{formatCtr(row.metrics?.ctr ?? 0)}</span>
+      ),
+      width: '90px',
+    },
+    {
       key: 'updated',
       header: 'Updated',
       render: (row) => <span className={styles.cellMuted}>{formatRelative(row.updatedAt)}</span>,
@@ -128,6 +231,9 @@ export default function AdsPage() {
       header: '',
       render: (row) => (
         <div className={styles.rowActions}>
+          <Button size="sm" variant="secondary" onClick={() => setStatsAd(row)}>
+            Stats
+          </Button>
           {canWrite && (
             <Button size="sm" variant="secondary" onClick={() => setEditing(row)}>
               Edit
@@ -149,7 +255,7 @@ export default function AdsPage() {
           )}
         </div>
       ),
-      width: '180px',
+      width: '240px',
       sticky: true,
     },
   ];
@@ -237,6 +343,8 @@ export default function AdsPage() {
           }}
         />
       </Modal>
+
+      <AdStatsModal ad={statsAd} onClose={() => setStatsAd(null)} />
     </>
   );
 }

@@ -139,6 +139,24 @@ export interface AdAdminRef {
   email: string;
 }
 
+export interface AdMetrics {
+  impressions: number;
+  clicks: number;
+  ctr: number;
+}
+
+export interface AdStatsSeriesPoint {
+  date: string;
+  impressions: number;
+  clicks: number;
+}
+
+export interface AdStats extends AdMetrics {
+  adId: string;
+  uniqueInstallations: number;
+  series: AdStatsSeriesPoint[];
+}
+
 export interface Ad {
   _id: string;
   name: string;
@@ -150,6 +168,7 @@ export interface Ad {
   endsAt: string | null;
   google?: GoogleAdPayload;
   personal?: PersonalAdPayload;
+  metrics?: AdMetrics;
   createdBy?: AdAdminRef | string;
   updatedBy?: AdAdminRef | string;
   createdAt: string;

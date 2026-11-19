@@ -16,6 +16,7 @@ import type {
   ReportKind,
   DashboardSummary,
   Ad,
+  AdStats,
   AdStatus,
   AdType,
   GoogleAdPayload,
@@ -227,6 +228,19 @@ export function useAds(params: AdsParams) {
     queryFn: async () => {
       const { data } = await api.get<{ success: true; data: Paginated<Ad> }>(
         withParams('/ads', params),
+      );
+      return data.data;
+    },
+  });
+}
+
+export function useAdStats(id: string | null, params: { from?: string; to?: string } = {}) {
+  return useQuery({
+    queryKey: ['ads', 'stats', id, params],
+    enabled: Boolean(id),
+    queryFn: async () => {
+      const { data } = await api.get<{ success: true; data: AdStats }>(
+        withParams(`/ads/${id}/stats`, params),
       );
       return data.data;
     },
