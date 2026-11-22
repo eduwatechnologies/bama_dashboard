@@ -3,12 +3,18 @@
 import { Card } from '@/components/Card';
 import { Button } from '@/components/Button';
 import { Field } from '@/components/Field';
+import { AppUpdateForm } from '@/components/AppUpdateForm';
 import { useAuth } from '@/lib/auth';
+import { useAppSettings } from '@/lib/hooks';
+import { extractErrorMessage } from '@/lib/api';
 import { Form, Formik } from 'formik';
 import styles from '../words/page.module.css';
 
 export default function SettingsPage() {
   const { admin, signOut } = useAuth();
+  const { data: appSettings, isLoading, error } = useAppSettings();
+  const canEdit = admin?.role === 'SUPER_ADMIN' || admin?.role === 'ADMIN';
+
   return (
     <>
       <header className={styles.header}>
@@ -20,6 +26,28 @@ export default function SettingsPage() {
           </p>
         </div>
       </header>
+
+      <Card
+        title="App update"
+        description="Controls the in-app update prompt served to the mobile app."
+      >
+        {isLoading ? (
+          <p className={styles.cellMuted}>Loading update settings…</p>
+        ) : error ? (
+          <p className={styles.errorBox}>
+            {extractErrorMessage(error, 'Could not load update settings.')}
+          </p>
+        ) : appSettings ? (
+          <>
+            {!canEdit && (
+              <p className={styles.cellMuted}>
+                Your role can view these settings but not change them. Ask an admin or super admin.
+              </p>
+            )}
+            <AppUpdateForm settings={appSettings.appUpdate} disabled={!canEdit} />
+          </>
+        ) : null}
+      </Card>
 
       <Card title="API endpoint" description="Where the dashboard talks to the admin API.">
         <Formik

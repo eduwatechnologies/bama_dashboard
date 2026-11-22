@@ -114,6 +114,22 @@ export interface Installation {
   updatedAt: string;
 }
 
+export interface AppUpdateSettings {
+  enabled: boolean;
+  latestVersion: string;
+  minVersion: string;
+  storeUrl: string;
+  message: string;
+}
+
+export interface AppSettings {
+  _id: string;
+  key: string;
+  appUpdate: AppUpdateSettings;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export type AdType = 'GOOGLE' | 'PERSONAL';
 export type AdStatus = 'DRAFT' | 'ACTIVE' | 'PAUSED' | 'ARCHIVED';
 export type GoogleAdFormat = 'BANNER' | 'INTERSTITIAL' | 'REWARDED' | 'NATIVE';

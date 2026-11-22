@@ -4,6 +4,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from './api';
 import type {
   AudioMeta,
+  AppSettings,
+  AppUpdateSettings,
   Category,
   CategoryStatus,
   ContentStatus,
@@ -518,5 +520,29 @@ export function useDeleteLanguage() {
       return data.data;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['languages'] }),
+  });
+}
+
+export function useAppSettings() {
+  return useQuery({
+    queryKey: ['app-settings'],
+    queryFn: async () => {
+      const { data } = await api.get<{ success: true; data: AppSettings }>('/app-settings');
+      return data.data;
+    },
+  });
+}
+
+export function useUpdateAppUpdate() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: Partial<AppUpdateSettings>) => {
+      const { data } = await api.patch<{ success: true; data: AppSettings }>(
+        '/app-settings/app-update',
+        input,
+      );
+      return data.data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['app-settings'] }),
   });
 }
